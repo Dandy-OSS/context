@@ -1,8 +1,19 @@
 import * as uuid from 'uuid'
 
-class OperationContextEntry {
+export class OperationError extends Error {
+	constructor(message: string, readonly context: OperationContextJSON) {
+		super(message)
+	}
+}
+
+interface OperationContextEntryJSON {
+	values: Record<string, any>
+	stacktrace: string[]
+}
+
+export class OperationContextEntry {
 	private readonly trace: Error
-	private readonly contextValues: Record<string, any> = {}
+	private readonly values: Record<string, any> = {}
 
 	constructor(private readonly context: OperationContext) {
 		this.trace = new Error('-----')
@@ -12,35 +23,44 @@ class OperationContextEntry {
 		return this.context.next()
 	}
 
-	addContext(key: string, value: any): OperationContextEntry {
-		this.contextValues[key] = value
+	setValue(key: string, value: any): OperationContextEntry {
+		this.values[key] = value
 		return this
 	}
 
 	addHttpRequest(
 		request: { method: string; url: string; body: any },
-		response: { status: number; body: any },
+		response: { statusCode: number; body: any },
 	): OperationContextEntry {
-		this.addContext('request', {
+		this.setValue('request', {
 			method: request.method,
 			url: request.method,
 			body: request.body,
 		})
-		this.addContext('response', {
-			status: response.status,
+		this.setValue('response', {
+			statusCode: response.statusCode,
 			body: response.body,
 		})
 		return this
 	}
 
-	toJSON() {
+	createError(message: string): OperationError {
+		return new OperationError(message, this.context.toJSON())
+	}
+
+	toJSON(): OperationContextEntryJSON {
 		const stacktrace = String(this.trace.stack || this.trace).split('\n')
 		return {
-			values: this.contextValues,
+			values: this.values,
 			// Remove the first line, it has an empty error message
 			stacktrace: stacktrace.slice(1).map((line) => line.trim()),
 		}
 	}
+}
+
+interface OperationContextJSON {
+	readonly operationID: string
+	readonly trace: OperationContextEntryJSON[]
 }
 
 export class OperationContext {
@@ -53,9 +73,9 @@ export class OperationContext {
 		return entry
 	}
 
-	toJSON() {
+	toJSON(): OperationContextJSON {
 		return {
-			id: this.id,
+			operationID: this.id,
 			trace: this.trace.map((entry) => entry.toJSON()),
 		}
 	}
