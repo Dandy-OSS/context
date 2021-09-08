@@ -21,10 +21,6 @@ export class OperationContextEntry {
 		this.trace = new Error('-----')
 	}
 
-	next() {
-		return this.context.next()
-	}
-
 	setValue(key: string, value: any): OperationContextEntry {
 		this.values[key] = value
 		return this
@@ -46,10 +42,6 @@ export class OperationContextEntry {
 		return this
 	}
 
-	createError(message: string): OperationError {
-		return this.context.createError(message)
-	}
-
 	toJSON(): OperationContextEntryJSON {
 		const stacktrace = String(this.trace.stack || this.trace).split('\n')
 		return {
@@ -57,6 +49,18 @@ export class OperationContextEntry {
 			// Remove the first line, it has an empty error message
 			stacktrace: stacktrace.slice(1).map((line) => line.trim()),
 		}
+	}
+
+	// Methods proxied back to operation
+
+	next() {
+		return this.context.next()
+	}
+
+	isRunning() { return this.context.isRunning() }
+
+	createError(message: string): OperationError {
+		return this.context.createError(message)
 	}
 }
 
