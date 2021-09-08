@@ -51,5 +51,43 @@ describe('OperationContext', () => {
 		]
 	`)
 	})
-	expect(operation.toJSON().id).toBeDefined()
+	it('should not allow entries after cancellation', () => {
+		const op = new OperationContext()
+		op.next()
+		op.next()
+		op.cancel()
+		expect(() => op.next()).toThrow()
+		expect(() => op.cancel()).toThrow()
+		expect(() => op.end()).toThrow()
+		expect(op.toJSON().trace.length).toEqual(2)
+		expect(op.isRunning()).toEqual(false)
+	})
+	it('should timeout automatically', async () => {
+		const op = new OperationContext()
+		op.setTimeout(1_000)
+		op.next()
+		await new Promise(resolve => setTimeout(resolve, 1_000))
+		expect(() => op.next()).toThrow()
+		expect(() => op.cancel()).toThrow()
+		expect(() => op.end()).toThrow()
+		expect(op.toJSON().trace.length).toEqual(1)
+		expect(op.isRunning()).toEqual(false)
+	})
+	it('should throw valuable errors on timeout', async () => {
+		const op = new OperationContext()
+		op.setTimeout(1_000)
+		op.next()
+		await new Promise(resolve => setTimeout(resolve, 1_000))
+
+		let error
+		try {
+			op.next()
+		} catch (err) {
+			error = err
+		}
+
+		expect(error.context).toBeDefined()
+		expect(error.context.toJSON().trace.length).toEqual(1)
+		expect(String(error)).toMatch(/timed out/)
+	})
 })
