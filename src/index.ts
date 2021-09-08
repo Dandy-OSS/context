@@ -57,7 +57,9 @@ export class OperationContextEntry {
 		return this.context.next()
 	}
 
-	isRunning() { return this.context.isRunning() }
+	isRunning() {
+		return this.context.isRunning()
+	}
 
 	createError(message: string): OperationError {
 		return this.context.createError(message)
@@ -125,7 +127,9 @@ export class OperationContext {
 
 		this.timeout = setTimeout(() => {
 			if (this.isRunning()) {
-				this.timeoutError = this.createError(`Operation timed out after ${maxTime}ms`)
+				this.timeoutError = this.createError(
+					`Operation timed out after ${maxTime}ms`,
+				)
 			}
 		}, maxTime)
 		return this
@@ -166,7 +170,7 @@ export class OperationContext {
 			operationID: this.id,
 			trace: this.trace.map((entry) => entry.toJSON()),
 			startedAt: this.startedAt,
-			endedAt: this.endedAt
+			endedAt: this.endedAt,
 		}
 	}
 }
