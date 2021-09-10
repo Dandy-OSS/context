@@ -1,0 +1,7 @@
+{
+  "cleanOutputDir": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "out": "docs",
+  "readme": "none"
+}
