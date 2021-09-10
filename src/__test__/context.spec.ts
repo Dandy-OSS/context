@@ -1,14 +1,22 @@
 import { describe, it, expect } from '@jest/globals'
-import {OperationContext, OperationContextEntry, OperationError} from '../index'
+import {
+	OperationContext,
+	OperationContextEntry,
+	OperationError,
+} from '../index'
 
 describe('OperationContext', () => {
 	it('should track context separately', () => {
-		function multiply(ctx: OperationContextEntry, a: number, b: number): number {
-			ctx.setValue({a, b})
+		function multiply(
+			ctx: OperationContextEntry,
+			a: number,
+			b: number,
+		): number {
+			ctx.setValue({ a, b })
 			return a * b
 		}
 		function pow(ctx: OperationContextEntry, a: number, b: number): number {
-			ctx.setValue({a, b})
+			ctx.setValue({ a, b })
 			if (b === 0) {
 				return 1
 			}
