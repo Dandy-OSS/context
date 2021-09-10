@@ -1,5 +1,8 @@
 import * as uuid from 'uuid'
 
+/**
+ * An error created using a context.
+ */
 export class OperationError extends Error {
 	readonly failedAt: number
 	constructor(message: string, readonly context: OperationContext) {
@@ -21,23 +24,36 @@ export class OperationContextEntry {
 		this.trace = new Error('-----')
 	}
 
-	setValue(key: string, value: any): OperationContextEntry {
-		this.values[key] = value
+	/**
+	 * Sets one or multiple values on the current context. If the keys already
+	 * exist, they will be overwritten.
+	 * @param values additional values to append
+	 */
+	setValue(values: Record<string, any>): OperationContextEntry {
+		Object.assign(this.values, values)
 		return this
 	}
 
+	/**
+	 * Given a request and response, appends the key information from both
+	 * onto the current context.
+	 * @param request
+	 * @param response
+	 */
 	addHttpRequest(
 		request: { method: string; url: string; body: any },
 		response: { statusCode: number; body: any },
 	): OperationContextEntry {
-		this.setValue('request', {
-			method: request.method,
-			url: request.method,
-			body: request.body,
-		})
-		this.setValue('response', {
-			statusCode: response.statusCode,
-			body: response.body,
+		this.setValue({
+			request: {
+				method: request.method,
+				url: request.method,
+				body: request.body,
+			},
+			response: {
+				statusCode: response.statusCode,
+				body: response.body,
+			},
 		})
 		return this
 	}
@@ -53,23 +69,49 @@ export class OperationContextEntry {
 
 	// Methods proxied back to operation
 
+	/**
+	 * Extends the context to another stack entry.
+	 */
 	next() {
 		return this.context.next()
 	}
 
+	/**
+	 * @returns isRunning true if the operation is still running
+	 */
 	isRunning() {
 		return this.context.isRunning()
 	}
 
+	/**
+	 * Fails the top-level operation.
+	 * @param message error message
+	 */
 	createError(message: string): OperationError {
 		return this.context.createError(message)
 	}
 }
 
 export enum OperationContextStatus {
+	/**
+	 * Represents a created but not yet ended operation.
+	 */
 	running = 'running',
+
+	/**
+	 * Represents an operation that has experienced at least one error.
+	 */
 	failed = 'failed',
+
+	/**
+	 * Represents an operation that received a cancellation signal.
+	 */
 	cancelled = 'cancelled',
+
+	/**
+	 * Represents an operation that received an end signal and did not
+	 * experience any errors.
+	 */
 	ended = 'ended',
 }
 
@@ -81,6 +123,12 @@ interface OperationContextJSON {
 	readonly endedAt?: number
 }
 
+/**
+ * @class OperationContext
+ *
+ * Responsible for managing the overall asynchronous operation. This
+ * object should not be passed after the parent that creates the operation.
+ */
 export class OperationContext {
 	private readonly id: string = uuid.v4()
 
@@ -95,10 +143,19 @@ export class OperationContext {
 	private timeout?: NodeJS.Timer
 	private timeoutError?: Error
 
+	/**
+	 * @returns {boolean} true if the operation is currently running
+	 * check this method to exit gracefully when operations are cancelled
+	 */
 	isRunning(): boolean {
 		return this.status === OperationContextStatus.running
 	}
 
+	/**
+	 * Creates a new stack entry in the operation. Ideally, call this when calling a new
+	 * asynchronous operation to track its context separately while attached to the high-level
+	 * operation.
+	 */
 	next(): OperationContextEntry {
 		if (this.timeoutError) {
 			throw this.timeoutError
@@ -112,6 +169,10 @@ export class OperationContext {
 		return entry
 	}
 
+	/**
+	 * Sends a cancellation signal. After this is called, the context can no longer
+	 * be extended via `.next()`.
+	 */
 	cancel(): OperationContext {
 		if (!this.isRunning()) {
 			throw this.createError(`Cannot cancel a ${this.status} operation`)
@@ -120,6 +181,14 @@ export class OperationContext {
 		return this
 	}
 
+	/**
+	 * Sets a timeout on the context. If the context is not ended within this time,
+	 * the context will be forcefully failed with a timeout error.
+	 *
+	 * Only one timeout may exist on a context at any given time.
+	 *
+	 * @param maxTime maximum time in milliseconds to wait before ending the operation
+	 */
 	setTimeout(maxTime: number): OperationContext {
 		if (this.timeout) {
 			throw this.createError(`Cannot set another timeout on the operation`)
@@ -135,6 +204,10 @@ export class OperationContext {
 		return this
 	}
 
+	/**
+	 * Sends an end signal to the operation. After this, the operation cannot
+	 * be extended using `.next()`.
+	 */
 	end(): OperationContext {
 		if (this.timeoutError) {
 			throw this.timeoutError
@@ -150,6 +223,11 @@ export class OperationContext {
 		return this
 	}
 
+	/**
+	 * Fails a context, and creates a context-rich error. Once an error has been
+	 * created, the context cannot be extended using `.next()`.
+	 * @param message the error message
+	 */
 	createError(message: string): OperationError {
 		if (!this.endedAt) {
 			this.endedAt = Date.now()
@@ -160,10 +238,17 @@ export class OperationContext {
 		return err
 	}
 
+	/**
+	 * Returns the full list of errors received by this operation, each with its
+	 * own context and failure time.
+	 */
 	getErrors(): OperationError[] {
 		return this.errors
 	}
 
+	/**
+	 * @returns json a json-serializable object representing the context currently
+	 */
 	toJSON(): OperationContextJSON {
 		return {
 			status: this.status,
