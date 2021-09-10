@@ -57,7 +57,7 @@ jobs:
         echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
         npm whoami
 
-        vercel whoami
+        vercel -t $VERCEL_TOKEN whoami
 
     - name: Publish unstable
       if: "matrix.node == 14"
