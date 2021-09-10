@@ -5,8 +5,8 @@
 <p align="center">Maintain meaningful context across async processes.</p>
 
 <p align="center">
-  <a href="https://github.com/karimsa/rsxjs/actions">
-    <img src="https://github.com/karimsa/rsxjs/workflows/CI/badge.svg" alt="Build Status">
+  <a href="https://github.com/Dandy-OSS/context/actions">
+    <img src="https://github.com/Dandy-OSS/context/workflows/CI/badge.svg" alt="Build Status">
   </a>
 </p>
 
