@@ -43,10 +43,26 @@ jobs:
     - name: Run tests
       run: yarn test
 
+    - name: Build
+      run: yarn build && yarn build:docs
+
+    - name: Setup for deploy
+      run: |
+        set -ex
+
+        echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+        npm whoami
+
+        vercel whoami
+
+    - name: Publish unstable
+      if: "matrix.node == 14"
+      run: |
+        npm publish --tag next
+        vercel -t $VERCEL_TOKEN
+
     - name: Publish
       if: "startsWith(github.ref, 'refs/tags/v') && matrix.node == 14"
       run: |
-        set -e
-        yarn build
-        echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
         npm publish
+        vercel -t $VERCEL_TOKEN --prod
