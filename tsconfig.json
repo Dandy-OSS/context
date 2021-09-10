@@ -4,7 +4,6 @@
     "lib": ["esnext"],
     "module": "commonjs",
     "moduleResolution": "node",
-    "emitDeclarationOnly": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
