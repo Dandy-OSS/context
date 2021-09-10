@@ -6,23 +6,7 @@ Maintain meaningful context across async processes.
 npm install @karimsa/context
 ```
 
-## TL;DR
-
-```javascript
-import { OperationContext } from '@karimsa/context'
-
-function someFunction(ctx, other, args) {
-   anotherFunction(ctx.next(), other)
-}
-
-const operation = new OperationContext()
-someFunction(operation.next(), other, args)
-
-operation.end()
-console.log(operation.toJSON())
-```
-
-## More details
+## Usage
 
 The purpose of this library is to manage a "context" object across several operations (usually async) and to maintain all context that is needed for debugging.
 This can be useful for better monitoring, measuring performance, and general troubleshooting. There's a few interesting things you can do with this:
@@ -69,6 +53,25 @@ function dumbOperation(ctx) {
 
 smartOperation(operation.next())
 dumbOperation(operation.next())
+```
+
+**Storing the context for debugging**
+
+The context is made to be JSON-serializable (`operation.toJSON()`) so you can report it to Sentry, or store it in your database. It will contain an ID for the overall operation and then separate entries for each time a sub-context was created. Each context entry contains a synchronous stack trace and the context values appended to it.
+
+```javascript
+const opertaion = new OperationContext()
+operation.next().next().next()
+operation.toJSON()
+/**
+ * {
+ *   operationID: '....',
+ *   trace: [
+ *     { values: {}, stacktrace: ['at index.js:1:1'] },
+ *     ...
+ *   ]
+ * }
+ */
 ```
 
 ## License
