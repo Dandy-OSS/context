@@ -1,14 +1,14 @@
 import { describe, it, expect } from '@jest/globals'
-import { OperationContext } from '../index'
+import {OperationContext, OperationContextEntry, OperationError} from '../index'
 
 describe('OperationContext', () => {
 	it('should track context separately', () => {
-		function multiply(ctx, a, b) {
-			ctx.setValue('a', a).setValue('b', b)
+		function multiply(ctx: OperationContextEntry, a: number, b: number): number {
+			ctx.setValue({a, b})
 			return a * b
 		}
-		function pow(ctx, a, b) {
-			ctx.setValue('a', a).setValue('b', b)
+		function pow(ctx: OperationContextEntry, a: number, b: number): number {
+			ctx.setValue({a, b})
 			if (b === 0) {
 				return 1
 			}
@@ -79,15 +79,16 @@ describe('OperationContext', () => {
 		op.next()
 		await new Promise((resolve) => setTimeout(resolve, 1_000))
 
-		let error
+		let error: OperationError
 		try {
 			op.next()
 		} catch (err) {
-			error = err
+			error = err as OperationError
 		}
 
-		expect(error.context).toBeDefined()
-		expect(error.context.toJSON().trace.length).toEqual(1)
-		expect(String(error)).toMatch(/timed out/)
+		expect(error!).toBeDefined()
+		expect(error!.context).toBeDefined()
+		expect(error!.context.toJSON().trace.length).toEqual(1)
+		expect(String(error!)).toMatch(/timed out/)
 	})
 })
