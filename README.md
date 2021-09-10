@@ -14,7 +14,13 @@
 npm install @karimsa/context
 ```
 
-## Usage
+**Table of Contents**
+
+ * [Documentation](https://orthly-context.vercel.app)
+ * [Examples](#examples)
+ * [License](#license)
+
+## Examples
 
 The purpose of this library is to manage a "context" object across several operations (usually async) and to maintain all context that is needed for debugging.
 This can be useful for better monitoring, measuring performance, and general troubleshooting. There's a few interesting things you can do with this:
