@@ -1,0 +1,14 @@
+.github
+.vercel
+coverage
+docs
+src
+node_modules
+.babelrc
+.gitignore
+.prettierrc
+esbuild.js
+jest.config.js
+tsconfig.json
+typedoc.json
+!dist
