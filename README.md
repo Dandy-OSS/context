@@ -27,6 +27,24 @@ console.log(operation.toJSON())
 The purpose of this library is to manage a "context" object across several operations (usually async) and to maintain all context that is needed for debugging.
 This can be useful for better monitoring, measuring performance, and general troubleshooting. There's a few interesting things you can do with this:
 
+**Adding values for debugging**
+
+```javascript
+const operation = new OperationContext()
+
+function oneMethod(ctx, a, b) {
+  ctx.setValue('a', a).setValue('b', b)
+  return a + b
+}
+
+function anotherMethod(ctx, a, b) {
+  ctx.setValue('a', a).setValue('b', b)
+  return oneMethod(ctx.next(), a, b)
+}
+
+anotherMethod(operation.next(), 1, 1)
+```
+
 **Create timed operations**
 
 All operations can be assigned a maximum time that they have to complete. If this time elapses and the operation has not been explicitly ended, it will be forcefully
