@@ -1,6 +1,14 @@
-# context
+<h1 align="center">
+  context
+</h1>
 
-Maintain meaningful context across async processes.
+<p align="center">Maintain meaningful context across async processes.</p>
+
+<p align="center">
+  <a href="https://github.com/karimsa/rsxjs/actions">
+    <img src="https://github.com/karimsa/rsxjs/workflows/CI/badge.svg" alt="Build Status">
+  </a>
+</p>
 
 ```
 npm install @karimsa/context
@@ -76,6 +84,6 @@ operation.toJSON()
 
 ## License
 
-Copyright &copy; Karim Alibhai 2021-present.
+Copyright &copy; Orthly Inc 2021-present.
 
 Licensed under MIT.

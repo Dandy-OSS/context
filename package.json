@@ -1,7 +1,11 @@
 {
-  "name": "@karimsa/context",
+  "name": "@orthly/context",
   "version": "0.0.0",
   "main": "./dist/index.js",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "node ./dist/index.js",
     "build": "tsc && node esbuild",
