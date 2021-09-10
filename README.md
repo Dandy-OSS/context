@@ -11,7 +11,7 @@
 </p>
 
 ```
-npm install @karimsa/context
+npm install @orthly/context
 ```
 
 **Table of Contents**
