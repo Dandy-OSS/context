@@ -163,7 +163,12 @@ export class OperationContext {
 	 * Sets the status to an ending status, and unlocks any waiters.
 	 * @internal
 	 */
-	private setStatus(status: OperationContextStatus.ended | OperationContextStatus.failed | OperationContextStatus.cancelled): void {
+	private setStatus(
+		status:
+			| OperationContextStatus.ended
+			| OperationContextStatus.failed
+			| OperationContextStatus.cancelled,
+	): void {
 		this.status = status
 		this.waitCond.unlock()
 	}
