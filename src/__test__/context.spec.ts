@@ -99,4 +99,18 @@ describe('OperationContext', () => {
 		expect(error!.context.toJSON().trace.length).toEqual(1)
 		expect(String(error!)).toMatch(/timed out/)
 	})
+	it('should filter out internal stacktrace items', () => {
+		function testFunction(ctx: OperationContextEntry) {}
+		function firstFunction(ctx: OperationContextEntry) {
+			testFunction(ctx.next())
+		}
+
+		const operation = new OperationContext()
+		firstFunction(operation.next())
+		operation.end()
+
+		const { trace } = operation.toJSON()
+		expect(trace).toHaveLength(2)
+		expect(trace[1].stacktrace[0]).toContain('firstFunction')
+	})
 })

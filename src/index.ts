@@ -18,11 +18,26 @@ interface OperationContextEntryJSON {
 }
 
 export class OperationContextEntry {
-	private readonly trace: Error
+	private readonly trace: string[]
 	private readonly values: Record<string, any> = {}
 
 	constructor(private readonly context: OperationContext) {
-		this.trace = new Error('-----')
+		const error = new Error('-----')
+		const stacktrace = String(error.stack || error).split('\n')
+
+		this.trace = stacktrace
+			// Remove the first line, it has an empty error message
+			.slice(1).map((line) => line.trim())
+			// Remove internal lines
+			.filter(line => {
+				if (!line.includes(__dirname)) {
+					return true
+				}
+				if (process.env.NODE_ENV === 'test') {
+					return line.includes('/__test__/')
+				}
+				return false
+			})
 	}
 
 	/**
@@ -60,11 +75,9 @@ export class OperationContextEntry {
 	}
 
 	toJSON(): OperationContextEntryJSON {
-		const stacktrace = String(this.trace.stack || this.trace).split('\n')
 		return {
 			values: this.values,
-			// Remove the first line, it has an empty error message
-			stacktrace: stacktrace.slice(1).map((line) => line.trim()),
+			stacktrace: this.trace,
 		}
 	}
 
