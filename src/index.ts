@@ -29,7 +29,7 @@ export class OperationContextEntry {
 	 * exist, they will be overwritten.
 	 * @param values additional values to append
 	 */
-	setValue(values: Record<string, any>): OperationContextEntry {
+	setValues(values: Record<string, any>): OperationContextEntry {
 		Object.assign(this.values, values)
 		return this
 	}
@@ -44,7 +44,7 @@ export class OperationContextEntry {
 		request: { method: string; url: string; body: any },
 		response: { statusCode: number; body: any },
 	): OperationContextEntry {
-		this.setValue({
+		this.setValues({
 			request: {
 				method: request.method,
 				url: request.method,

@@ -12,11 +12,11 @@ describe('OperationContext', () => {
 			a: number,
 			b: number,
 		): number {
-			ctx.setValue({ a, b })
+			ctx.setValues({ a, b })
 			return a * b
 		}
 		function pow(ctx: OperationContextEntry, a: number, b: number): number {
-			ctx.setValue({ a, b })
+			ctx.setValues({ a, b })
 			if (b === 0) {
 				return 1
 			}
