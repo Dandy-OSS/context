@@ -170,6 +170,7 @@ export class OperationContext {
 			| OperationContextStatus.cancelled,
 	): void {
 		this.status = status
+		this.endedAt = Date.now()
 		this.waitCond.unlock()
 	}
 
@@ -240,7 +241,6 @@ export class OperationContext {
 		if (this.timeout) {
 			clearTimeout(this.timeout)
 		}
-		this.endedAt = Date.now()
 		this.setStatus(OperationContextStatus.ended)
 		return this
 	}
@@ -265,6 +265,10 @@ export class OperationContext {
 	 */
 	async wait() {
 		await this.waitCond.wait()
+		const firstErr = this.errors[0]
+		if (firstErr) {
+			throw firstErr
+		}
 	}
 
 	/**

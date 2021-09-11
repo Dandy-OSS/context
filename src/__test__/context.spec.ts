@@ -74,7 +74,7 @@ describe('OperationContext', () => {
 		const op = new OperationContext()
 		op.setTimeout(1_000)
 		op.next()
-		await new Promise((resolve) => setTimeout(resolve, 1_000))
+		await expect(op.wait()).rejects.toThrow()
 		expect(() => op.next()).toThrow()
 		expect(() => op.cancel()).toThrow()
 		expect(() => op.end()).toThrow()
