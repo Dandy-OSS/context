@@ -116,14 +116,14 @@ describe('OperationContext', () => {
 	it('should wait for background processes to complete', async () => {
 		async function bgProcess(ctx: OperationContextEntry) {
 			await Promise.resolve()
-			ctx.setValues({hello:'world'})
+			ctx.setValues({ hello: 'world' })
 		}
 
 		const operation = new OperationContext()
 		operation.addBackgroundProcess(bgProcess(operation.next()))
 		await operation.wait()
 
-		expect(operation.toJSON().trace[0].values).toEqual({hello:'world'})
+		expect(operation.toJSON().trace[0].values).toEqual({ hello: 'world' })
 	})
 	it('should error when background processes fail', async () => {
 		async function bgProcess(ctx: OperationContextEntry) {

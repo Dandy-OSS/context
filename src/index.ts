@@ -254,8 +254,10 @@ export class OperationContext {
 		if (!this.isRunning()) {
 			throw this.createError(`Cannot end a ${this.status} operation`)
 		}
-		if (this.activeProcesses.length  > 0) {
-			throw this.createError(`Cannot end an operation with background processes, please use .wait()`)
+		if (this.activeProcesses.length > 0) {
+			throw this.createError(
+				`Cannot end an operation with background processes, please use .wait()`,
+			)
 		}
 		if (this.timeout) {
 			clearTimeout(this.timeout)
@@ -286,9 +288,12 @@ export class OperationContext {
 	 * @param promise a promise returned by the background operation
 	 */
 	addBackgroundProcess(promise: PromiseLike<any>): OperationContext {
-		const p = promise.then(() => {}, (error) => {
-			this.createError(error.message || String(error))
-		})
+		const p = promise.then(
+			() => {},
+			(error) => {
+				this.createError(error.message || String(error))
+			},
+		)
 		this.activeProcesses.push(p)
 
 		return this
