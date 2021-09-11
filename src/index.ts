@@ -27,9 +27,10 @@ export class OperationContextEntry {
 
 		this.trace = stacktrace
 			// Remove the first line, it has an empty error message
-			.slice(1).map((line) => line.trim())
+			.slice(1)
+			.map((line) => line.trim())
 			// Remove internal lines
-			.filter(line => {
+			.filter((line) => {
 				if (!line.includes(__dirname)) {
 					return true
 				}
