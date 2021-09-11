@@ -159,6 +159,8 @@ export class OperationContext {
 	private timeout?: NodeJS.Timer
 	private timeoutError?: Error
 
+	private readonly activeProcesses: PromiseLike<void>[] = []
+
 	constructor() {
 		this.id = uuid.v4()
 		this.waitCond = new Cond(this.id)
@@ -252,6 +254,9 @@ export class OperationContext {
 		if (!this.isRunning()) {
 			throw this.createError(`Cannot end a ${this.status} operation`)
 		}
+		if (this.activeProcesses.length  > 0) {
+			throw this.createError(`Cannot end an operation with background processes, please use .wait()`)
+		}
 		if (this.timeout) {
 			clearTimeout(this.timeout)
 		}
@@ -275,10 +280,34 @@ export class OperationContext {
 	}
 
 	/**
+	 * Adds a background process to the current operation. When the given promise
+	 * resolves or rejects, the operation is considered complete. The success of the current
+	 * operation depends on the background process.
+	 * @param promise a promise returned by the background operation
+	 */
+	addBackgroundProcess(promise: PromiseLike<any>): OperationContext {
+		const p = promise.then(() => {}, (error) => {
+			this.createError(error.message || String(error))
+		})
+		this.activeProcesses.push(p)
+
+		return this
+	}
+
+	/**
 	 * Wait for an ending signal.
 	 */
 	async wait() {
-		await this.waitCond.wait()
+		if (this.activeProcesses.length > 0) {
+			await Promise.race<any>([
+				Promise.all(this.activeProcesses),
+				this.waitCond.wait(),
+			])
+		} else {
+			await this.waitCond.wait()
+		}
+
+		this.waitCond.unlock()
 		const firstErr = this.errors[0]
 		if (firstErr) {
 			throw firstErr
