@@ -36,7 +36,10 @@ jobs:
           ${{ runner.os }}-yarn-
 
     - name: Install Node.js dependencies
-      run: yarn --frozen-lockfile
+      run: |
+        if ! [ -d "./node_modules" ]; then
+          yarn install --frozen-lockfile
+        fi
 
     - name: Run lint
       run: yarn lint
