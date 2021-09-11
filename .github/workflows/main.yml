@@ -59,14 +59,16 @@ jobs:
 
         vercel -t $VERCEL_TOKEN whoami
 
+    # prerelease versions must have a '-' to be released
     - name: Publish unstable
-      if: "matrix.node == 14"
+      if: "startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') && matrix.node == 14"
       run: |
         npm publish --tag next
         vercel -t $VERCEL_TOKEN
 
+    # latest tags must not have a prerelease number
     - name: Publish
-      if: "startsWith(github.ref, 'refs/tags/v') && matrix.node == 14"
+      if: "startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') && matrix.node == 14"
       run: |
         npm publish
         vercel -t $VERCEL_TOKEN --prod
