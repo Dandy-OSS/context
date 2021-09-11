@@ -1,4 +1,5 @@
 import * as uuid from 'uuid'
+import { Cond } from './cond'
 
 /**
  * An error created using a context.
@@ -130,9 +131,10 @@ interface OperationContextJSON {
  * object should not be passed after the parent that creates the operation.
  */
 export class OperationContext {
-	private readonly id: string = uuid.v4()
+	private readonly id: string
 
 	private status: OperationContextStatus = OperationContextStatus.running
+	private readonly waitCond
 
 	private trace: OperationContextEntry[] = []
 	private errors: OperationError[] = []
@@ -143,12 +145,27 @@ export class OperationContext {
 	private timeout?: NodeJS.Timer
 	private timeoutError?: Error
 
+	constructor() {
+		this.id = uuid.v4()
+		this.waitCond = new Cond(this.id)
+		this.waitCond.lock()
+	}
+
 	/**
 	 * @returns {boolean} true if the operation is currently running
 	 * check this method to exit gracefully when operations are cancelled
 	 */
 	isRunning(): boolean {
 		return this.status === OperationContextStatus.running
+	}
+
+	/**
+	 * Sets the status to an ending status, and unlocks any waiters.
+	 * @internal
+	 */
+	private setStatus(status: OperationContextStatus.ended | OperationContextStatus.failed | OperationContextStatus.cancelled): void {
+		this.status = status
+		this.waitCond.unlock()
 	}
 
 	/**
@@ -177,7 +194,7 @@ export class OperationContext {
 		if (!this.isRunning()) {
 			throw this.createError(`Cannot cancel a ${this.status} operation`)
 		}
-		this.status = OperationContextStatus.cancelled
+		this.setStatus(OperationContextStatus.cancelled)
 		return this
 	}
 
@@ -219,7 +236,7 @@ export class OperationContext {
 			clearTimeout(this.timeout)
 		}
 		this.endedAt = Date.now()
-		this.status = OperationContextStatus.ended
+		this.setStatus(OperationContextStatus.ended)
 		return this
 	}
 
@@ -232,10 +249,17 @@ export class OperationContext {
 		if (!this.endedAt) {
 			this.endedAt = Date.now()
 		}
-		this.status = OperationContextStatus.failed
+		this.setStatus(OperationContextStatus.failed)
 		const err = new OperationError(message, this)
 		this.errors.push(err)
 		return err
+	}
+
+	/**
+	 * Wait for an ending signal.
+	 */
+	async wait() {
+		await this.waitCond.wait()
 	}
 
 	/**
