@@ -1,9 +1,9 @@
-import { describe, it, expect } from '@jest/globals'
 import {
 	OperationContext,
 	OperationContextEntry,
 	OperationError,
 } from '../index'
+import { describe, it, expect } from '@jest/globals'
 
 describe('OperationContext', () => {
 	it('should track context separately', () => {

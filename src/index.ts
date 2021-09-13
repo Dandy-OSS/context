@@ -1,5 +1,5 @@
-import * as uuid from 'uuid'
 import { Cond } from './cond'
+import * as uuid from 'uuid'
 
 /**
  * An error created using a context.
@@ -52,26 +52,32 @@ export class OperationContextEntry {
 	}
 
 	/**
-	 * Given a request and response, appends the key information from both
-	 * onto the current context.
+	 * Given a request, appends the key information onto the current context.
 	 * @param request
+	 */
+	addHttpRequest(request: {
+		method: string
+		url: string
+		headers: Record<string, string>
+		body: any
+	}): OperationContextEntry {
+		this.setValues({
+			request,
+			response: null,
+		})
+		return this
+	}
+
+	/**
+	 * Given a response, appends the key information onto the current context.
 	 * @param response
 	 */
-	addHttpRequest(
-		request: { method: string; url: string; body: any },
-		response: { statusCode: number; body: any },
-	): OperationContextEntry {
-		this.setValues({
-			request: {
-				method: request.method,
-				url: request.method,
-				body: request.body,
-			},
-			response: {
-				statusCode: response.statusCode,
-				body: response.body,
-			},
-		})
+	addHttpResponse(response: {
+		statusCode: number
+		headers: Record<string, string>
+		body: any
+	}): OperationContextEntry {
+		this.setValues({ response })
 		return this
 	}
 
