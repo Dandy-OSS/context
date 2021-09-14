@@ -134,4 +134,17 @@ describe('OperationContext', () => {
 		operation.addBackgroundProcess(bgProcess(operation.next()))
 		await expect(operation.wait()).rejects.toThrow(/testing bg failure/)
 	})
+	it('should produce shortened json', () => {
+		function a(ctx: OperationContextEntry) {
+			b(ctx.next())
+		}
+		function b(ctx: OperationContextEntry) {}
+
+		const operation = new OperationContext()
+		a(operation.next())
+		operation.end()
+
+		expect(operation.toJSON().trace).toHaveLength(2)
+		expect(operation.toShortJSON().trace).toHaveLength(0)
+	})
 })

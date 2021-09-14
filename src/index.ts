@@ -20,6 +20,7 @@ interface OperationContextEntryJSON {
 export class OperationContextEntry {
 	private readonly trace: string[]
 	private readonly values: Record<string, any> = {}
+	private empty: boolean = true
 
 	constructor(private readonly context: OperationContext) {
 		const error = new Error('-----')
@@ -42,12 +43,20 @@ export class OperationContextEntry {
 	}
 
 	/**
+	 * @returns isEmpty true if the current entry has not added any new data
+	 */
+	isEmpty() {
+		return this.empty
+	}
+
+	/**
 	 * Sets one or multiple values on the current context. If the keys already
 	 * exist, they will be overwritten.
 	 * @param values additional values to append
 	 */
 	setValues(values: Record<string, any>): OperationContextEntry {
 		Object.assign(this.values, values)
+		this.empty = false
 		return this
 	}
 
@@ -85,6 +94,13 @@ export class OperationContextEntry {
 		return {
 			values: this.values,
 			stacktrace: this.trace,
+		}
+	}
+
+	toShortJSON(): OperationContextEntryJSON {
+		return {
+			values: this.values,
+			stacktrace: this.trace.slice(0, 1),
 		}
 	}
 
@@ -341,6 +357,22 @@ export class OperationContext {
 			status: this.status,
 			operationID: this.id,
 			trace: this.trace.map((entry) => entry.toJSON()),
+			startedAt: this.startedAt,
+			endedAt: this.endedAt,
+		}
+	}
+
+	/**
+	 * @returns json a shortened version of the `toJSON()` response (all empty entries are
+	 * filtered out, and only a single stacktrace item is included)
+	 */
+	toShortJSON(): OperationContextJSON {
+		return {
+			status: this.status,
+			operationID: this.id,
+			trace: this.trace.flatMap((entry) => {
+				return entry.isEmpty() ? [] : [entry.toShortJSON()]
+			}),
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}
