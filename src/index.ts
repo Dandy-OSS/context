@@ -123,7 +123,7 @@ export class OperationContext {
 	 */
 	setValues(values: Record<string, any>): OperationContext {
 		this.checkpoint()
-		this.stack.push({ values, error: new Error() })
+		this.stack.push({ values, error: new Error(), createdAt: Date.now() })
 		return this
 	}
 

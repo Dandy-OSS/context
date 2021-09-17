@@ -1,11 +1,13 @@
 export interface OperationContextEntryJSON {
 	values: Record<string, any>
 	stacktrace: string[]
+	createdAt: number
 }
 
 export interface OperationContextEntry {
 	values: Record<string, any>
 	error: Error
+	createdAt: number
 }
 
 export function createLongJSONFromEntry(
@@ -28,6 +30,7 @@ export function createLongJSONFromEntry(
 				}
 				return false
 			}),
+		createdAt: entry.createdAt,
 	}
 }
 
@@ -39,5 +42,6 @@ export function createShortJSONFromEntry(
 		stacktrace: String(entry.error.stack || entry.error)
 			.split('\n')
 			.slice(1, 2),
+		createdAt: entry.createdAt,
 	}
 }
