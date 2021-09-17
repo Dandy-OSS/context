@@ -123,15 +123,15 @@ export class OperationContext {
 	 * @param response the http response
 	 */
 	addHttpRequest(
-		request?: {
+		request: {
 			method: string
 			url: string
-			headers: Record<string, string>
-			body: any
+			headers?: Record<string, string>
+			body?: any
 		},
 		response?: {
 			statusCode: number
-			headers: Record<string, string>
+			headers?: Record<string, string>
 			body: any
 		},
 	): OperationContext {
