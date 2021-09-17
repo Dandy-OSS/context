@@ -35,7 +35,7 @@ export function createLongJSONFromEntry(
 			}),
 		createdAt: entry.createdAt,
 		sinceLastEntry:
-			index > 0 ? entries[index - 1].createdAt - entry.createdAt : -1,
+			index > 0 ? entry.createdAt - entries[index - 1].createdAt : -1,
 	}
 }
 
@@ -51,6 +51,6 @@ export function createShortJSONFromEntry(
 			.slice(1, 2),
 		createdAt: entry.createdAt,
 		sinceLastEntry:
-			index > 0 ? entries[index - 1].createdAt - entry.createdAt : -1,
+			index > 0 ? entry.createdAt - entries[index - 1].createdAt : -1,
 	}
 }
