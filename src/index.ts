@@ -111,7 +111,9 @@ export class OperationContext {
 			throw this.timeoutError
 		}
 		if (!this.isRunning()) {
-			throw this.createError(`Operation is not running (status: ${this.status})`)
+			throw this.createError(
+				`Operation is not running (status: ${this.status})`,
+			)
 		}
 		return this
 	}
