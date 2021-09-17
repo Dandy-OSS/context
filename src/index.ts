@@ -49,6 +49,10 @@ interface OperationContextJSON {
 	readonly endedAt?: number
 }
 
+export interface OperationTimer {
+	end(): void
+}
+
 /**
  * @class OperationContext
  *
@@ -168,6 +172,21 @@ export class OperationContext {
 			response,
 		})
 		return this
+	}
+
+	/**
+	 * Starts a timer for a specific event.
+	 * @param name a name for the timer
+	 * @returns timer a handler that allows the process that started the timer to end it
+	 */
+	startTimer(name: string): OperationTimer {
+		const timerStartedAt = Date.now()
+		return {
+			end: () => {
+				const duration = Date.now() - timerStartedAt
+				this.setValues({ [name]: { type: 'timer', startedAt: timerStartedAt, duration } })
+			},
+		}
 	}
 
 	/**
