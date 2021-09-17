@@ -274,7 +274,7 @@ export class OperationContext {
 		return {
 			status: this.status,
 			operationID: this.id,
-			trace: this.stack.map((entry) => createLongJSONFromEntry(entry)),
+			trace: this.stack.map(createLongJSONFromEntry),
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}
@@ -288,7 +288,7 @@ export class OperationContext {
 		return {
 			status: this.status,
 			operationID: this.id,
-			trace: this.stack.map((entry) => createShortJSONFromEntry(entry)),
+			trace: this.stack.map(createShortJSONFromEntry),
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}

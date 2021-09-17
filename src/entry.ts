@@ -1,17 +1,20 @@
-export interface OperationContextEntryJSON {
-	values: Record<string, any>
-	stacktrace: string[]
-	createdAt: number
-}
-
 export interface OperationContextEntry {
 	values: Record<string, any>
 	error: Error
 	createdAt: number
 }
 
+export interface OperationContextEntryJSON {
+	values: Record<string, any>
+	stacktrace: string[]
+	createdAt: number
+	sinceLastEntry: number
+}
+
 export function createLongJSONFromEntry(
 	entry: OperationContextEntry,
+	index: number,
+	entries: OperationContextEntry[],
 ): OperationContextEntryJSON {
 	return {
 		values: entry.values,
@@ -31,11 +34,15 @@ export function createLongJSONFromEntry(
 				return false
 			}),
 		createdAt: entry.createdAt,
+		sinceLastEntry:
+			index > 0 ? entries[index - 1].createdAt - entry.createdAt : -1,
 	}
 }
 
 export function createShortJSONFromEntry(
 	entry: OperationContextEntry,
+	index: number,
+	entries: OperationContextEntry[],
 ): OperationContextEntryJSON {
 	return {
 		values: entry.values,
@@ -43,5 +50,7 @@ export function createShortJSONFromEntry(
 			.split('\n')
 			.slice(1, 2),
 		createdAt: entry.createdAt,
+		sinceLastEntry:
+			index > 0 ? entries[index - 1].createdAt - entry.createdAt : -1,
 	}
 }
