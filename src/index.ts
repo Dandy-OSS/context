@@ -113,7 +113,7 @@ export class OperationContext {
 		if (!this.isRunning()) {
 			throw this.createError(`Cannot set values on a ${this.status} operation`)
 		}
-		this.stack.push({ values, error: new Error('---') })
+		this.stack.push({ values, error: new Error() })
 		return this
 	}
 
