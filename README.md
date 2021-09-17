@@ -1,5 +1,5 @@
 <h1 align="center">
-  context
+  @orthly/context
 </h1>
 
 <p align="center">Maintain meaningful context across async processes.</p>
@@ -7,6 +7,18 @@
 <p align="center">
   <a href="https://github.com/Dandy-OSS/context/actions">
     <img src="https://github.com/Dandy-OSS/context/workflows/CI/badge.svg" alt="Build Status">
+  </a>
+
+  <a href="https://npmjs.org/@orthly/context">
+    <img alt="npm (scoped)" src="https://img.shields.io/npm/v/@orthly/context" />
+  </a>
+
+  <a href="https://npmjs.org/@orthly/context">
+    <img alt="npm" src="https://img.shields.io/npm/dw/@orthly/context" />
+  </a>
+
+  <a href="https://github.com/Dandy-OSS/context/tree/main/LICENSE.md">
+    <img alt="MIT" src="https://img.shields.io/npm/l/@orthly/context" />
   </a>
 </p>
 
