@@ -119,8 +119,9 @@ export class OperationContext {
 	}
 
 	/**
-	 * Sets one or multiple values on the current context. If the keys already
-	 * exist, they will be overwritten.
+	 * Sets one or multiple values on the current context. You can call this method
+	 * multiple times with the same keys, each value will be tracked separately. Each
+	 * call to this method generates a new entry on the operation stack.
 	 * @param values additional values to append
 	 */
 	setValues(values: Record<string, any>): OperationContext {
@@ -149,6 +150,23 @@ export class OperationContext {
 	): OperationContext {
 		this.setValues({
 			request: request ?? null,
+			response: response ?? null,
+		})
+		return this
+	}
+
+	/**
+	 * Given a response, appends the key information onto the current context.
+	 * @param response the http response
+	 */
+	addHttpResponse(
+		response: {
+			statusCode: number
+			headers?: Record<string, string>
+			body: any
+		},
+	): OperationContext {
+		this.setValues({
 			response: response ?? null,
 		})
 		return this
