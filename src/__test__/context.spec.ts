@@ -92,7 +92,7 @@ describe('OperationContext', () => {
 		it('should record time between value tracking', async () => {
 			const ctx = new OperationContext()
 			ctx.setValues({ a: 1 })
-			await new Promise(resolve => setTimeout(resolve, 100))
+			await new Promise((resolve) => setTimeout(resolve, 100))
 			ctx.setValues({ b: 1 })
 			ctx.end()
 
@@ -206,7 +206,7 @@ describe('OperationContext', () => {
 		it('should record timer duration for all timers', async () => {
 			const ctx = new OperationContext()
 			const timer = ctx.startTimer('foobar')
-			await new Promise(resolve => setTimeout(resolve, 100))
+			await new Promise((resolve) => setTimeout(resolve, 100))
 			timer.end()
 			ctx.end()
 

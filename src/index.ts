@@ -184,7 +184,9 @@ export class OperationContext {
 		return {
 			end: () => {
 				const duration = Date.now() - timerStartedAt
-				this.setValues({ [name]: { type: 'timer', startedAt: timerStartedAt, duration } })
+				this.setValues({
+					[name]: { type: 'timer', startedAt: timerStartedAt, duration },
+				})
 			},
 		}
 	}
