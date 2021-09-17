@@ -18,7 +18,7 @@ export class OperationError extends Error {
 	}
 }
 
-export enum OperationContextStatus {
+enum OperationContextStatus {
 	/**
 	 * Represents a created but not yet ended operation.
 	 */
@@ -111,7 +111,7 @@ export class OperationContext {
 			throw this.timeoutError
 		}
 		if (!this.isRunning()) {
-			throw this.createError(`Cannot set values on a ${this.status} operation`)
+			throw this.createError(`Operation is not running (status: ${this.status})`)
 		}
 		return this
 	}
