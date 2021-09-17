@@ -165,7 +165,7 @@ export class OperationContext {
 		body: any
 	}): OperationContext {
 		this.setValues({
-			response: response ?? null,
+			response,
 		})
 		return this
 	}
