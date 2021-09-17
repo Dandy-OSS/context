@@ -159,13 +159,11 @@ export class OperationContext {
 	 * Given a response, appends the key information onto the current context.
 	 * @param response the http response
 	 */
-	addHttpResponse(
-		response: {
-			statusCode: number
-			headers?: Record<string, string>
-			body: any
-		},
-	): OperationContext {
+	addHttpResponse(response: {
+		statusCode: number
+		headers?: Record<string, string>
+		body: any
+	}): OperationContext {
 		this.setValues({
 			response: response ?? null,
 		})
