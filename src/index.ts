@@ -1,5 +1,11 @@
 import { Cond } from './cond'
 import * as uuid from 'uuid'
+import {
+	createLongJSONFromEntry,
+	createShortJSONFromEntry,
+	OperationContextEntryJSON,
+	OperationContextEntry,
+} from './entry'
 
 /**
  * An error created using a context.
@@ -12,124 +18,7 @@ export class OperationError extends Error {
 	}
 }
 
-interface OperationContextEntryJSON {
-	values: Record<string, any>
-	stacktrace: string[]
-}
-
-export class OperationContextEntry {
-	private readonly trace: string[]
-	private readonly values: Record<string, any> = {}
-	private empty: boolean = true
-
-	constructor(private readonly context: OperationContext) {
-		const error = new Error('-----')
-		const stacktrace = String(error.stack || error).split('\n')
-
-		this.trace = stacktrace
-			// Remove the first line, it has an empty error message
-			.slice(1)
-			.map((line) => line.trim())
-			// Remove internal lines
-			.filter((line) => {
-				if (!line.includes(__dirname)) {
-					return true
-				}
-				if (process.env.NODE_ENV === 'test') {
-					return line.includes('/__test__/')
-				}
-				return false
-			})
-	}
-
-	/**
-	 * @returns isEmpty true if the current entry has not added any new data
-	 */
-	isEmpty() {
-		return this.empty
-	}
-
-	/**
-	 * Sets one or multiple values on the current context. If the keys already
-	 * exist, they will be overwritten.
-	 * @param values additional values to append
-	 */
-	setValues(values: Record<string, any>): OperationContextEntry {
-		Object.assign(this.values, values)
-		this.empty = false
-		return this
-	}
-
-	/**
-	 * Given a request, appends the key information onto the current context.
-	 * @param request
-	 */
-	addHttpRequest(request: {
-		method: string
-		url: string
-		headers: Record<string, string>
-		body: any
-	}): OperationContextEntry {
-		this.setValues({
-			request,
-			response: null,
-		})
-		return this
-	}
-
-	/**
-	 * Given a response, appends the key information onto the current context.
-	 * @param response
-	 */
-	addHttpResponse(response: {
-		statusCode: number
-		headers: Record<string, string>
-		body: any
-	}): OperationContextEntry {
-		this.setValues({ response })
-		return this
-	}
-
-	toJSON(): OperationContextEntryJSON {
-		return {
-			values: this.values,
-			stacktrace: this.trace,
-		}
-	}
-
-	toShortJSON(): OperationContextEntryJSON {
-		return {
-			values: this.values,
-			stacktrace: this.trace.slice(0, 1),
-		}
-	}
-
-	// Methods proxied back to operation
-
-	/**
-	 * Extends the context to another stack entry.
-	 */
-	next() {
-		return this.context.next()
-	}
-
-	/**
-	 * @returns isRunning true if the operation is still running
-	 */
-	isRunning() {
-		return this.context.isRunning()
-	}
-
-	/**
-	 * Fails the top-level operation.
-	 * @param message error message
-	 */
-	createError(message: string): OperationError {
-		return this.context.createError(message)
-	}
-}
-
-export enum OperationContextStatus {
+enum OperationContextStatus {
 	/**
 	 * Represents a created but not yet ended operation.
 	 */
@@ -172,7 +61,7 @@ export class OperationContext {
 	private status: OperationContextStatus = OperationContextStatus.running
 	private readonly waitCond
 
-	private trace: OperationContextEntry[] = []
+	private stack: OperationContextEntry[] = []
 	private errors: OperationError[] = []
 
 	private readonly startedAt: number = Date.now()
@@ -213,31 +102,79 @@ export class OperationContext {
 	}
 
 	/**
-	 * Creates a new stack entry in the operation. Ideally, call this when calling a new
-	 * asynchronous operation to track its context separately while attached to the high-level
-	 * operation.
+	 * Useful for declaring a checkpoint in your process where it is safe to exit.
+	 * At the checkpoint, if the operation has exceeded its timeout or is cancelled, an
+	 * error will be thrown.
 	 */
-	next(): OperationContextEntry {
+	checkpoint(): OperationContext {
 		if (this.timeoutError) {
 			throw this.timeoutError
 		}
 		if (!this.isRunning()) {
-			throw this.createError(`Cannot continue a ${this.status} operation`)
+			throw this.createError(
+				`Operation is not running (status: ${this.status})`,
+			)
 		}
-
-		const entry = new OperationContextEntry(this)
-		this.trace.push(entry)
-		return entry
+		return this
 	}
 
 	/**
-	 * Sends a cancellation signal. After this is called, the context can no longer
-	 * be extended via `.next()`.
+	 * Sets one or multiple values on the current context. You can call this method
+	 * multiple times with the same keys, each value will be tracked separately. Each
+	 * call to this method generates a new entry on the operation stack.
+	 * @param values additional values to append
+	 */
+	setValues(values: Record<string, any>): OperationContext {
+		this.checkpoint()
+		this.stack.push({ values, error: new Error(), createdAt: Date.now() })
+		return this
+	}
+
+	/**
+	 * Given a request, appends the key information onto the current context.
+	 * @param request the http request
+	 * @param response the http response
+	 */
+	addHttpRequest(
+		request: {
+			method: string
+			url: string
+			headers?: Record<string, string>
+			body?: any
+		},
+		response?: {
+			statusCode: number
+			headers?: Record<string, string>
+			body: any
+		},
+	): OperationContext {
+		this.setValues({
+			request: request ?? null,
+			response: response ?? null,
+		})
+		return this
+	}
+
+	/**
+	 * Given a response, appends the key information onto the current context.
+	 * @param response the http response
+	 */
+	addHttpResponse(response: {
+		statusCode: number
+		headers?: Record<string, string>
+		body: any
+	}): OperationContext {
+		this.setValues({
+			response,
+		})
+		return this
+	}
+
+	/**
+	 * Sends a cancellation signal. After this point, checkpoints will fail.
 	 */
 	cancel(): OperationContext {
-		if (!this.isRunning()) {
-			throw this.createError(`Cannot cancel a ${this.status} operation`)
-		}
+		this.checkpoint()
 		this.setStatus(OperationContextStatus.cancelled)
 		return this
 	}
@@ -266,16 +203,10 @@ export class OperationContext {
 	}
 
 	/**
-	 * Sends an end signal to the operation. After this, the operation cannot
-	 * be extended using `.next()`.
+	 * Sends an end signal to the operation. After this point, checkpoints will fail.
 	 */
 	end(): OperationContext {
-		if (this.timeoutError) {
-			throw this.timeoutError
-		}
-		if (!this.isRunning()) {
-			throw this.createError(`Cannot end a ${this.status} operation`)
-		}
+		this.checkpoint()
 		if (this.activeProcesses.length > 0) {
 			throw this.createError(
 				`Cannot end an operation with background processes, please use .wait()`,
@@ -289,8 +220,7 @@ export class OperationContext {
 	}
 
 	/**
-	 * Fails a context, and creates a context-rich error. Once an error has been
-	 * created, the context cannot be extended using `.next()`.
+	 * Fails a context, and creates a context-rich error. After this point, checkpoints will fail.
 	 * @param message the error message
 	 */
 	createError(message: string): OperationError {
@@ -317,6 +247,12 @@ export class OperationContext {
 			},
 		)
 		this.activeProcesses.push(p)
+
+		// checkpointing at the end of this function rather than the start, because
+		// by the time we enter this function, a new process has been started and a
+		// promise (without a .catch) now exists. it is best to add handling for that
+		// before unwinding the sync stack.
+		this.checkpoint()
 
 		return this
 	}
@@ -356,7 +292,7 @@ export class OperationContext {
 		return {
 			status: this.status,
 			operationID: this.id,
-			trace: this.trace.map((entry) => entry.toJSON()),
+			trace: this.stack.map(createLongJSONFromEntry),
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}
@@ -370,9 +306,7 @@ export class OperationContext {
 		return {
 			status: this.status,
 			operationID: this.id,
-			trace: this.trace.flatMap((entry) => {
-				return entry.isEmpty() ? [] : [entry.toShortJSON()]
-			}),
+			trace: this.stack.map(createShortJSONFromEntry),
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}

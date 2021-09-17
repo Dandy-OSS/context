@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        node: [14, 16, 18]
+        node: [12, 14, 16]
 
     steps:
     - uses: actions/checkout@v1
@@ -21,7 +21,7 @@ jobs:
     - name: Setup Node.js for use with actions
       uses: actions/setup-node@v1.1.0
       with:
-        version: 14.x
+        version: ${{ matrix.node }}
 
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
@@ -64,14 +64,14 @@ jobs:
 
     # prerelease versions must have a '-' to be released
     - name: Publish unstable
-      if: "startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') && matrix.node == 14"
+      if: "startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') && matrix.node == 12"
       run: |
         npm publish --tag next
         vercel -t $VERCEL_TOKEN
 
     # latest tags must not have a prerelease number
     - name: Publish
-      if: "startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') && matrix.node == 14"
+      if: "startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') && matrix.node == 12"
       run: |
         npm publish
         vercel -t $VERCEL_TOKEN --prod

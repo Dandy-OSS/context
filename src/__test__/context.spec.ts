@@ -1,95 +1,124 @@
-import {
-	OperationContext,
-	OperationContextEntry,
-	OperationError,
-} from '../index'
+import { OperationContext, OperationError } from '../index'
 import { describe, it, expect } from '@jest/globals'
 
 describe('OperationContext', () => {
 	it('should track context separately', () => {
-		function multiply(
-			ctx: OperationContextEntry,
-			a: number,
-			b: number,
-		): number {
-			ctx.setValues({ a, b })
+		function multiply(ctx: OperationContext, a: number, b: number): number {
+			ctx.setValues({ op: 'mul', a, b })
 			return a * b
 		}
-		function pow(ctx: OperationContextEntry, a: number, b: number): number {
-			ctx.setValues({ a, b })
+		function pow(ctx: OperationContext, a: number, b: number): number {
+			ctx.setValues({ op: 'pow', a, b })
 			if (b === 0) {
 				return 1
 			}
-			return multiply(ctx.next(), a, pow(ctx.next(), a, b - 1))
+			return multiply(ctx, a, pow(ctx, a, b - 1))
 		}
 
-		const operation = new OperationContext()
-		expect(pow(operation.next(), 2, 3)).toEqual(8)
-		expect(operation.toJSON().trace.map((entry) => entry.values))
+		const ctx = new OperationContext()
+		expect(pow(ctx, 2, 6)).toEqual(64)
+		expect(ctx.toJSON().trace.map((entry) => entry.values))
 			.toMatchInlineSnapshot(`
 		Array [
 		  Object {
 		    "a": 2,
-		    "b": 3,
+		    "b": 6,
+		    "op": "pow",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 5,
+		    "op": "pow",
 		  },
 		  Object {
 		    "a": 2,
 		    "b": 4,
+		    "op": "pow",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 3,
+		    "op": "pow",
 		  },
 		  Object {
 		    "a": 2,
 		    "b": 2,
-		  },
-		  Object {
-		    "a": 2,
-		    "b": 2,
-		  },
-		  Object {
-		    "a": 2,
-		    "b": 1,
+		    "op": "pow",
 		  },
 		  Object {
 		    "a": 2,
 		    "b": 1,
+		    "op": "pow",
 		  },
 		  Object {
 		    "a": 2,
 		    "b": 0,
+		    "op": "pow",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 1,
+		    "op": "mul",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 2,
+		    "op": "mul",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 4,
+		    "op": "mul",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 8,
+		    "op": "mul",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 16,
+		    "op": "mul",
+		  },
+		  Object {
+		    "a": 2,
+		    "b": 32,
+		    "op": "mul",
 		  },
 		]
 	`)
 	})
 	it('should not allow entries after cancellation', () => {
-		const op = new OperationContext()
-		op.next()
-		op.next()
-		op.cancel()
-		expect(() => op.next()).toThrow()
-		expect(() => op.cancel()).toThrow()
-		expect(() => op.end()).toThrow()
-		expect(op.toJSON().trace.length).toEqual(2)
-		expect(op.isRunning()).toEqual(false)
+		const ctx = new OperationContext()
+		ctx.setValues({ a: 1 })
+		ctx.setValues({ a: 1 })
+		ctx.cancel()
+		expect(() => ctx.setValues({ a: 1 })).toThrow()
+		expect(() => ctx.cancel()).toThrow()
+		expect(() => ctx.end()).toThrow()
+		expect(ctx.toJSON().trace.length).toEqual(2)
+		expect(ctx.isRunning()).toEqual(false)
 	})
 	it('should timeout automatically', async () => {
-		const op = new OperationContext()
-		op.setTimeout(1_000)
-		op.next()
-		await expect(op.wait()).rejects.toThrow()
-		expect(() => op.next()).toThrow()
-		expect(() => op.cancel()).toThrow()
-		expect(() => op.end()).toThrow()
-		expect(op.toJSON().trace.length).toEqual(1)
-		expect(op.isRunning()).toEqual(false)
+		const ctx = new OperationContext()
+		ctx.setTimeout(1_000)
+		ctx.setValues({ a: 1 })
+		await expect(ctx.wait()).rejects.toThrow()
+		expect(() => ctx.setValues({ a: 1 })).toThrow()
+		expect(() => ctx.cancel()).toThrow()
+		expect(() => ctx.end()).toThrow()
+		expect(ctx.toJSON().trace.length).toEqual(1)
+		expect(ctx.isRunning()).toEqual(false)
 	})
 	it('should throw valuable errors on timeout', async () => {
-		const op = new OperationContext()
-		op.setTimeout(1_000)
-		op.next()
+		const ctx = new OperationContext()
+		ctx.setTimeout(1_000)
+		ctx.setValues({ a: 1 })
 		await new Promise((resolve) => setTimeout(resolve, 1_000))
 
 		let error: OperationError
 		try {
-			op.next()
+			ctx.setValues({ a: 1 })
 		} catch (err) {
 			error = err as OperationError
 		}
@@ -100,51 +129,50 @@ describe('OperationContext', () => {
 		expect(String(error!)).toMatch(/timed out/)
 	})
 	it('should filter out internal stacktrace items', () => {
-		function testFunction(ctx: OperationContextEntry) {}
-		function firstFunction(ctx: OperationContextEntry) {
-			testFunction(ctx.next())
+		function testFunction(ctx: OperationContext) {
+			ctx.setValues({ a: 1 })
+		}
+		function firstFunction(ctx: OperationContext) {
+			ctx.setValues({ a: 1 })
+			testFunction(ctx)
 		}
 
-		const operation = new OperationContext()
-		firstFunction(operation.next())
-		operation.end()
+		const ctx = new OperationContext()
+		firstFunction(ctx)
+		ctx.end()
 
-		const { trace } = operation.toJSON()
+		const { trace } = ctx.toJSON()
 		expect(trace).toHaveLength(2)
-		expect(trace[1].stacktrace[0]).toContain('firstFunction')
+		expect(trace[0].stacktrace[0]).toContain('firstFunction')
 	})
 	it('should wait for background processes to complete', async () => {
-		async function bgProcess(ctx: OperationContextEntry) {
+		async function bgProcess(ctx: OperationContext) {
 			await Promise.resolve()
 			ctx.setValues({ hello: 'world' })
 		}
 
-		const operation = new OperationContext()
-		operation.addBackgroundProcess(bgProcess(operation.next()))
-		await operation.wait()
+		const ctx = new OperationContext()
+		ctx.addBackgroundProcess(bgProcess(ctx))
+		await ctx.wait()
 
-		expect(operation.toJSON().trace[0].values).toEqual({ hello: 'world' })
+		expect(ctx.toJSON().trace[0].values).toEqual({ hello: 'world' })
 	})
 	it('should error when background processes fail', async () => {
-		async function bgProcess(ctx: OperationContextEntry) {
+		async function bgProcess(ctx: OperationContext) {
+			ctx.setValues({ a: 1 })
 			throw new Error('testing bg failure')
 		}
 
-		const operation = new OperationContext()
-		operation.addBackgroundProcess(bgProcess(operation.next()))
-		await expect(operation.wait()).rejects.toThrow(/testing bg failure/)
+		const ctx = new OperationContext()
+		ctx.addBackgroundProcess(bgProcess(ctx))
+		await expect(ctx.wait()).rejects.toThrow(/testing bg failure/)
 	})
 	it('should produce shortened json', () => {
-		function a(ctx: OperationContextEntry) {
-			b(ctx.next())
-		}
-		function b(ctx: OperationContextEntry) {}
+		const ctx = new OperationContext()
+		ctx.setValues({ a: 1 })
+		ctx.end()
 
-		const operation = new OperationContext()
-		a(operation.next())
-		operation.end()
-
-		expect(operation.toJSON().trace).toHaveLength(2)
-		expect(operation.toShortJSON().trace).toHaveLength(0)
+		expect(ctx.toJSON().trace[0].stacktrace.length).toBeGreaterThan(1)
+		expect(ctx.toShortJSON().trace[0].stacktrace).toHaveLength(1)
 	})
 })
