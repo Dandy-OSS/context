@@ -102,17 +102,27 @@ export class OperationContext {
 	}
 
 	/**
-	 * Sets one or multiple values on the current context. If the keys already
-	 * exist, they will be overwritten.
-	 * @param values additional values to append
+	 * Useful for declaring a checkpoint in your process where it is safe to exit.
+	 * At the checkpoint, if the operation has exceeded its timeout or is cancelled, an
+	 * error will be thrown.
 	 */
-	setValues(values: Record<string, any>): OperationContext {
+	checkpoint(): OperationContext {
 		if (this.timeoutError) {
 			throw this.timeoutError
 		}
 		if (!this.isRunning()) {
 			throw this.createError(`Cannot set values on a ${this.status} operation`)
 		}
+		return this
+	}
+
+	/**
+	 * Sets one or multiple values on the current context. If the keys already
+	 * exist, they will be overwritten.
+	 * @param values additional values to append
+	 */
+	setValues(values: Record<string, any>): OperationContext {
+		this.checkpoint()
 		this.stack.push({ values, error: new Error() })
 		return this
 	}
@@ -143,13 +153,10 @@ export class OperationContext {
 	}
 
 	/**
-	 * Sends a cancellation signal. After this is called, the context can no longer
-	 * be extended via `.next()`.
+	 * Sends a cancellation signal. After this point, checkpoints will fail.
 	 */
 	cancel(): OperationContext {
-		if (!this.isRunning()) {
-			throw this.createError(`Cannot cancel a ${this.status} operation`)
-		}
+		this.checkpoint()
 		this.setStatus(OperationContextStatus.cancelled)
 		return this
 	}
@@ -178,16 +185,10 @@ export class OperationContext {
 	}
 
 	/**
-	 * Sends an end signal to the operation. After this, the operation cannot
-	 * be extended using `.next()`.
+	 * Sends an end signal to the operation. After this point, checkpoints will fail.
 	 */
 	end(): OperationContext {
-		if (this.timeoutError) {
-			throw this.timeoutError
-		}
-		if (!this.isRunning()) {
-			throw this.createError(`Cannot end a ${this.status} operation`)
-		}
+		this.checkpoint()
 		if (this.activeProcesses.length > 0) {
 			throw this.createError(
 				`Cannot end an operation with background processes, please use .wait()`,
@@ -201,8 +202,7 @@ export class OperationContext {
 	}
 
 	/**
-	 * Fails a context, and creates a context-rich error. Once an error has been
-	 * created, the context cannot be extended using `.next()`.
+	 * Fails a context, and creates a context-rich error. After this point, checkpoints will fail.
 	 * @param message the error message
 	 */
 	createError(message: string): OperationError {
@@ -229,6 +229,12 @@ export class OperationContext {
 			},
 		)
 		this.activeProcesses.push(p)
+
+		// checkpointing at the end of this function rather than the start, because
+		// by the time we enter this function, a new process has been started and a
+		// promise (without a .catch) now exists. it is best to add handling for that
+		// before unwinding the sync stack.
+		this.checkpoint()
 
 		return this
 	}
