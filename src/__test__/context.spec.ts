@@ -212,7 +212,7 @@ describe('OperationContext', () => {
 
 			const { trace } = ctx.toJSON()
 			expect(trace).toHaveLength(1)
-			expect(trace[0].values.foobar.duration).toBeGreaterThan(100)
+			expect(trace[0].values.foobar.duration).toBeGreaterThanOrEqual(100)
 		})
 	})
 })
