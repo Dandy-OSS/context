@@ -1,5 +1,11 @@
 import { Cond } from './cond'
 import * as uuid from 'uuid'
+import {
+	createLongJSONFromEntry,
+	createShortJSONFromEntry,
+	OperationContextEntryJSON,
+	OperationContextEntry,
+} from './entry'
 
 /**
  * An error created using a context.
@@ -9,123 +15,6 @@ export class OperationError extends Error {
 	constructor(message: string, readonly context: OperationContext) {
 		super(message)
 		this.failedAt = Date.now()
-	}
-}
-
-interface OperationContextEntryJSON {
-	values: Record<string, any>
-	stacktrace: string[]
-}
-
-export class OperationContextEntry {
-	private readonly trace: string[]
-	private readonly values: Record<string, any> = {}
-	private empty: boolean = true
-
-	constructor(private readonly context: OperationContext) {
-		const error = new Error('-----')
-		const stacktrace = String(error.stack || error).split('\n')
-
-		this.trace = stacktrace
-			// Remove the first line, it has an empty error message
-			.slice(1)
-			.map((line) => line.trim())
-			// Remove internal lines
-			.filter((line) => {
-				if (!line.includes(__dirname)) {
-					return true
-				}
-				if (process.env.NODE_ENV === 'test') {
-					return line.includes('/__test__/')
-				}
-				return false
-			})
-	}
-
-	/**
-	 * @returns isEmpty true if the current entry has not added any new data
-	 */
-	isEmpty() {
-		return this.empty
-	}
-
-	/**
-	 * Sets one or multiple values on the current context. If the keys already
-	 * exist, they will be overwritten.
-	 * @param values additional values to append
-	 */
-	setValues(values: Record<string, any>): OperationContextEntry {
-		Object.assign(this.values, values)
-		this.empty = false
-		return this
-	}
-
-	/**
-	 * Given a request, appends the key information onto the current context.
-	 * @param request
-	 */
-	addHttpRequest(request: {
-		method: string
-		url: string
-		headers: Record<string, string>
-		body: any
-	}): OperationContextEntry {
-		this.setValues({
-			request,
-			response: null,
-		})
-		return this
-	}
-
-	/**
-	 * Given a response, appends the key information onto the current context.
-	 * @param response
-	 */
-	addHttpResponse(response: {
-		statusCode: number
-		headers: Record<string, string>
-		body: any
-	}): OperationContextEntry {
-		this.setValues({ response })
-		return this
-	}
-
-	toJSON(): OperationContextEntryJSON {
-		return {
-			values: this.values,
-			stacktrace: this.trace,
-		}
-	}
-
-	toShortJSON(): OperationContextEntryJSON {
-		return {
-			values: this.values,
-			stacktrace: this.trace.slice(0, 1),
-		}
-	}
-
-	// Methods proxied back to operation
-
-	/**
-	 * Extends the context to another stack entry.
-	 */
-	next() {
-		return this.context.next()
-	}
-
-	/**
-	 * @returns isRunning true if the operation is still running
-	 */
-	isRunning() {
-		return this.context.isRunning()
-	}
-
-	/**
-	 * Fails the top-level operation.
-	 * @param message error message
-	 */
-	createError(message: string): OperationError {
-		return this.context.createError(message)
 	}
 }
 
@@ -172,7 +61,7 @@ export class OperationContext {
 	private status: OperationContextStatus = OperationContextStatus.running
 	private readonly waitCond
 
-	private trace: OperationContextEntry[] = []
+	private stack: OperationContextEntry[] = []
 	private errors: OperationError[] = []
 
 	private readonly startedAt: number = Date.now()
@@ -213,21 +102,44 @@ export class OperationContext {
 	}
 
 	/**
-	 * Creates a new stack entry in the operation. Ideally, call this when calling a new
-	 * asynchronous operation to track its context separately while attached to the high-level
-	 * operation.
+	 * Sets one or multiple values on the current context. If the keys already
+	 * exist, they will be overwritten.
+	 * @param values additional values to append
 	 */
-	next(): OperationContextEntry {
+	setValues(values: Record<string, any>): OperationContext {
 		if (this.timeoutError) {
 			throw this.timeoutError
 		}
 		if (!this.isRunning()) {
-			throw this.createError(`Cannot continue a ${this.status} operation`)
+			throw this.createError(`Cannot set values on a ${this.status} operation`)
 		}
+		this.stack.push({ values, error: new Error('---') })
+		return this
+	}
 
-		const entry = new OperationContextEntry(this)
-		this.trace.push(entry)
-		return entry
+	/**
+	 * Given a request, appends the key information onto the current context.
+	 * @param request the http request
+	 * @param response the http response
+	 */
+	addHttpRequest(
+		request?: {
+			method: string
+			url: string
+			headers: Record<string, string>
+			body: any
+		},
+		response?: {
+			statusCode: number
+			headers: Record<string, string>
+			body: any
+		},
+	): OperationContext {
+		this.setValues({
+			request: request ?? null,
+			response: response ?? null,
+		})
+		return this
 	}
 
 	/**
@@ -356,7 +268,7 @@ export class OperationContext {
 		return {
 			status: this.status,
 			operationID: this.id,
-			trace: this.trace.map((entry) => entry.toJSON()),
+			trace: this.stack.map((entry) => createLongJSONFromEntry(entry)),
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}
@@ -370,9 +282,7 @@ export class OperationContext {
 		return {
 			status: this.status,
 			operationID: this.id,
-			trace: this.trace.flatMap((entry) => {
-				return entry.isEmpty() ? [] : [entry.toShortJSON()]
-			}),
+			trace: this.stack.map((entry) => createShortJSONFromEntry(entry)),
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}

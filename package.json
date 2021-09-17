@@ -6,6 +6,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "engines": {
+    "node": ">= 12"
+  },
   "scripts": {
     "start": "node ./dist/index.js",
     "build": "rm -rf dist && tsc -p . --emitDeclarationOnly && node esbuild",
