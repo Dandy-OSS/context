@@ -205,14 +205,18 @@ describe('OperationContext', () => {
 	describe('timers', () => {
 		it('should record timer duration for all timers', async () => {
 			const ctx = new OperationContext()
-			const timer = ctx.startTimer('foobar')
+
+			const firstTimer = ctx.startTimer('foobar')
 			await new Promise((resolve) => setTimeout(resolve, 100))
-			timer.end()
+			firstTimer.end()
+
+			const secondTimer = ctx.startTimer('foobar')
+			await new Promise((resolve) => setTimeout(resolve, 100))
+			secondTimer.end()
+
 			ctx.end()
 
-			const { trace } = ctx.toJSON()
-			expect(trace).toHaveLength(1)
-			expect(trace[0].values.foobar.duration).toBeGreaterThanOrEqual(90)
+			console.dir(ctx.toJSON(), {depth:100});
 		})
 	})
 })
