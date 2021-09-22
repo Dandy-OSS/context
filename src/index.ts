@@ -55,21 +55,21 @@ export interface OperationTimer {
 }
 
 export interface OperationMetricEntry {
-	name: string;
-	startedAt: number;
-	duration: number;
-	percentage: number;
+	name: string
+	startedAt: number
+	duration: number
+	percentage: number
 }
 
 export interface OperationCumulativeMetric {
-	numberOfEvents: number;
-	totalDuration: number;
-	totalPercentage: number;
+	numberOfEvents: number
+	totalDuration: number
+	totalPercentage: number
 }
 
 export interface OperationMetrics {
-	entries: OperationMetricEntry[];
-	cumulative: Record<string, OperationCumulativeMetric>;
+	entries: OperationMetricEntry[]
+	cumulative: Record<string, OperationCumulativeMetric>
 }
 
 /**
@@ -124,7 +124,7 @@ export class OperationContext {
 			| OperationContextStatus.cancelled,
 	): void {
 		if (this.status !== OperationContextStatus.running) {
-			throw new Error(`Cannot change status from ${this.status}`);
+			throw new Error(`Cannot change status from ${this.status}`)
 		}
 
 		this.status = status
@@ -230,8 +230,8 @@ export class OperationContext {
 				this.metrics.cumulative[name] = this.metrics.cumulative[name] ?? {
 					numberOfEvents: 0,
 					totalDuration: 0,
-					totalPercentage: -1
-				};
+					totalPercentage: -1,
+				}
 				this.metrics.cumulative[name].numberOfEvents++
 				this.metrics.cumulative[name].totalDuration += duration
 			},

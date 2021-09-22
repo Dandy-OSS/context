@@ -216,7 +216,7 @@ describe('OperationContext', () => {
 
 			ctx.end()
 
-			console.dir(ctx.toJSON(), {depth:100});
+			console.dir(ctx.toJSON(), { depth: 100 })
 		})
 	})
 })
