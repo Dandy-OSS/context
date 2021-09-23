@@ -62,6 +62,7 @@ export interface OperationMetricEntry {
 }
 
 export interface OperationCumulativeMetric {
+	name: string
 	numberOfEvents: number
 	totalDuration: number
 	totalPercentage: number
@@ -69,7 +70,7 @@ export interface OperationCumulativeMetric {
 
 export interface OperationMetrics {
 	entries: OperationMetricEntry[]
-	cumulative: Record<string, OperationCumulativeMetric>
+	cumulative: OperationCumulativeMetric[]
 }
 
 /**
@@ -88,7 +89,7 @@ export class OperationContext {
 	private errors: OperationError[] = []
 	private metrics: OperationMetrics = {
 		entries: [],
-		cumulative: {},
+		cumulative: [],
 	}
 
 	private readonly startedAt: number = Date.now()
@@ -138,6 +139,11 @@ export class OperationContext {
 		for (const entry of Object.values(this.metrics.cumulative)) {
 			entry.totalPercentage = entry.totalDuration / totalDuration
 		}
+
+		// Sort by biggest impact
+		this.metrics.cumulative.sort(
+			(a, b) => b.totalPercentage - a.totalPercentage,
+		)
 	}
 
 	/**
@@ -243,13 +249,22 @@ export class OperationContext {
 					// this is not known until the end of the operation
 					percentage: -1,
 				})
-				this.metrics.cumulative[name] = this.metrics.cumulative[name] ?? {
-					numberOfEvents: 0,
-					totalDuration: 0,
-					totalPercentage: -1,
+
+				let cumulativeEntry = this.metrics.cumulative.find(
+					(entry) => entry.name === name,
+				)
+				if (!cumulativeEntry) {
+					cumulativeEntry = {
+						name,
+						numberOfEvents: 0,
+						totalDuration: 0,
+						totalPercentage: -1,
+					}
+					this.metrics.cumulative.push(cumulativeEntry)
 				}
-				this.metrics.cumulative[name].numberOfEvents++
-				this.metrics.cumulative[name].totalDuration += duration
+
+				cumulativeEntry.numberOfEvents++
+				cumulativeEntry.totalDuration += duration
 			},
 		}
 	}
