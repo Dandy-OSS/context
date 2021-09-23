@@ -215,13 +215,13 @@ export class OperationContext {
 	 * @param promise any promise-like object that can be awaited against
 	 */
 	async timePromise<T>(name: string, promise: PromiseLike<T>): Promise<T> {
-		const timer = this.startTimer(name);
+		const timer = this.startTimer(name)
 		try {
-			return await promise;
+			return await promise
 		} catch (error) {
-			throw error;
+			throw error
 		} finally {
-			timer.end();
+			timer.end()
 		}
 	}
 
