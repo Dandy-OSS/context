@@ -210,6 +210,22 @@ export class OperationContext {
 	}
 
 	/**
+	 * Times how long it takes a given promise to pass or fail.
+	 * @param name the name to use when storing this metric
+	 * @param promise any promise-like object that can be awaited against
+	 */
+	async timePromise<T>(name: string, promise: PromiseLike<T>): Promise<T> {
+		const timer = this.startTimer(name);
+		try {
+			return await promise;
+		} catch (error) {
+			throw error;
+		} finally {
+			timer.end();
+		}
+	}
+
+	/**
 	 * Starts a timer for a specific event.
 	 * @param name a name for the timer
 	 * @returns timer a handler that allows the process that started the timer to end it
