@@ -270,6 +270,16 @@ export class OperationContext {
 	}
 
 	/**
+	 * @returns the number of milliseconds for which this operation has been alive
+	 */
+	getDuration(): number {
+		if (this.isRunning()) {
+			return Date.now() - this.startedAt
+		}
+		return this.endedAt! - this.startedAt
+	}
+
+	/**
 	 * Sends a cancellation signal. After this point, checkpoints will fail.
 	 */
 	cancel(): OperationContext {
