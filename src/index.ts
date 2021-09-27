@@ -47,6 +47,30 @@ interface OperationContextJSON {
 	readonly trace: OperationContextEntryJSON[]
 	readonly startedAt: number
 	readonly endedAt?: number
+	readonly metrics: OperationMetrics
+}
+
+export interface OperationTimer {
+	end(): void
+}
+
+export interface OperationMetricEntry {
+	name: string
+	startedAt: number
+	duration: number
+	percentage: number
+}
+
+export interface OperationCumulativeMetric {
+	name: string
+	numberOfEvents: number
+	totalDuration: number
+	totalPercentage: number
+}
+
+export interface OperationMetrics {
+	entries: OperationMetricEntry[]
+	cumulative: OperationCumulativeMetric[]
 }
 
 /**
@@ -63,6 +87,10 @@ export class OperationContext {
 
 	private stack: OperationContextEntry[] = []
 	private errors: OperationError[] = []
+	private metrics: OperationMetrics = {
+		entries: [],
+		cumulative: [],
+	}
 
 	private readonly startedAt: number = Date.now()
 	private endedAt?: number
@@ -96,9 +124,26 @@ export class OperationContext {
 			| OperationContextStatus.failed
 			| OperationContextStatus.cancelled,
 	): void {
+		if (this.status !== OperationContextStatus.running) {
+			throw new Error(`Cannot change status from ${this.status}`)
+		}
+
 		this.status = status
 		this.endedAt = Date.now()
 		this.waitCond.unlock()
+
+		const totalDuration = this.endedAt - this.startedAt
+		for (const entry of this.metrics.entries) {
+			entry.percentage = entry.duration / totalDuration
+		}
+		for (const entry of Object.values(this.metrics.cumulative)) {
+			entry.totalPercentage = entry.totalDuration / totalDuration
+		}
+
+		// Sort by biggest impact
+		this.metrics.cumulative.sort(
+			(a, b) => b.totalPercentage - a.totalPercentage,
+		)
 	}
 
 	/**
@@ -168,6 +213,70 @@ export class OperationContext {
 			response,
 		})
 		return this
+	}
+
+	/**
+	 * Times how long it takes a given promise to pass or fail.
+	 * @param name the name to use when storing this metric
+	 * @param promise any promise-like object that can be awaited against
+	 */
+	async timePromise<T>(name: string, promise: PromiseLike<T>): Promise<T> {
+		const timer = this.startTimer(name)
+		try {
+			return await promise
+		} catch (error) {
+			throw error
+		} finally {
+			timer.end()
+		}
+	}
+
+	/**
+	 * Starts a timer for a specific event.
+	 * @param name a name for the timer
+	 * @returns timer a handler that allows the process that started the timer to end it
+	 */
+	startTimer(name: string): OperationTimer {
+		const startedAt = Date.now()
+		return {
+			end: () => {
+				const duration = Date.now() - startedAt
+				this.metrics.entries.push({
+					name,
+					startedAt,
+					duration,
+
+					// this is not known until the end of the operation
+					percentage: -1,
+				})
+
+				let cumulativeEntry = this.metrics.cumulative.find(
+					(entry) => entry.name === name,
+				)
+				if (!cumulativeEntry) {
+					cumulativeEntry = {
+						name,
+						numberOfEvents: 0,
+						totalDuration: 0,
+						totalPercentage: -1,
+					}
+					this.metrics.cumulative.push(cumulativeEntry)
+				}
+
+				cumulativeEntry.numberOfEvents++
+				cumulativeEntry.totalDuration += duration
+			},
+		}
+	}
+
+	/**
+	 * @returns the number of milliseconds for which this operation has been alive
+	 */
+	getDuration(): number {
+		if (this.isRunning()) {
+			return Date.now() - this.startedAt
+		}
+		return this.endedAt! - this.startedAt
 	}
 
 	/**
@@ -293,6 +402,7 @@ export class OperationContext {
 			status: this.status,
 			operationID: this.id,
 			trace: this.stack.map(createLongJSONFromEntry),
+			metrics: this.metrics,
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}
@@ -307,6 +417,7 @@ export class OperationContext {
 			status: this.status,
 			operationID: this.id,
 			trace: this.stack.map(createShortJSONFromEntry),
+			metrics: this.metrics,
 			startedAt: this.startedAt,
 			endedAt: this.endedAt,
 		}
