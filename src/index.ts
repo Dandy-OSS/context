@@ -7,15 +7,12 @@ import {
 	OperationContextEntry,
 } from './entry'
 
-/**
- * An error created using a context.
- */
-export class OperationError extends Error {
+export interface OperationError extends Error {
 	readonly failedAt: number
-	constructor(message: string, readonly context: OperationContext) {
-		super(message)
-		this.failedAt = Date.now()
-	}
+
+	// this is not used internally within the library, but
+	// could be useful to catch within a user application
+	readonly context: OperationContext
 }
 
 enum OperationContextStatus {
@@ -329,17 +326,30 @@ export class OperationContext {
 	}
 
 	/**
+	 * Fails a context, and appends context onto the error. After this point, checkpoints will fail.
+	 * @param error an existing error object
+	 */
+	failWith(error: Error): OperationError {
+		if (!this.endedAt) {
+			this.endedAt = Date.now()
+		}
+		if (this.isRunning()) {
+			this.setStatus(OperationContextStatus.failed)
+		}
+		const err: OperationError = Object.assign(error, {
+			failedAt: Date.now(),
+			context: this,
+		})
+		this.errors.push(err)
+		return err
+	}
+
+	/**
 	 * Fails a context, and creates a context-rich error. After this point, checkpoints will fail.
 	 * @param message the error message
 	 */
 	createError(message: string): OperationError {
-		if (!this.endedAt) {
-			this.endedAt = Date.now()
-		}
-		this.setStatus(OperationContextStatus.failed)
-		const err = new OperationError(message, this)
-		this.errors.push(err)
-		return err
+		return this.failWith(new Error(message))
 	}
 
 	/**
