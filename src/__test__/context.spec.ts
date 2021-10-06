@@ -173,7 +173,7 @@ describe('OperationContext', () => {
 			ctx.setValues({ b: 2 })
 			ctx.end()
 
-			expect(ctx.getValues()).toEqual([{ a: 1 }, { b: 2 }]);
+			expect(ctx.getValues()).toEqual([{ a: 1 }, { b: 2 }])
 		})
 	})
 

@@ -411,6 +411,8 @@ export class OperationContext {
 	 * @returns return just the values from the stack, skipping any empty frames
 	 */
 	getValues(): Record<string, any>[] {
-		return this.stack.map(entry => entry.values).filter(values => Object.keys(values).length > 0);
+		return this.stack
+			.map((entry) => entry.values)
+			.filter((values) => Object.keys(values).length > 0)
 	}
 }
