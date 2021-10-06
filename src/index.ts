@@ -2,7 +2,6 @@ import { Cond } from './cond'
 import * as uuid from 'uuid'
 import {
 	createLongJSONFromEntry,
-	createShortJSONFromEntry,
 	OperationContextEntryJSON,
 	OperationContextEntry,
 } from './entry'
@@ -409,17 +408,11 @@ export class OperationContext {
 	}
 
 	/**
-	 * @returns json a shortened version of the `toJSON()` response (all empty entries are
-	 * filtered out, and only a single stacktrace item is included)
+	 * @returns return just the values from the stack, skipping any empty frames
 	 */
-	toShortJSON(): OperationContextJSON {
-		return {
-			status: this.status,
-			operationID: this.id,
-			trace: this.stack.map(createShortJSONFromEntry),
-			metrics: this.metrics,
-			startedAt: this.startedAt,
-			endedAt: this.endedAt,
-		}
+	getValues(): Record<string, any>[] {
+		return this.stack
+			.map((entry) => entry.values)
+			.filter((values) => Object.keys(values).length > 0)
 	}
 }
