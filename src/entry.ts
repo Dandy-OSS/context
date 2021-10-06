@@ -38,19 +38,3 @@ export function createLongJSONFromEntry(
 			index > 0 ? entry.createdAt - entries[index - 1].createdAt : -1,
 	}
 }
-
-export function createShortJSONFromEntry(
-	entry: OperationContextEntry,
-	index: number,
-	entries: OperationContextEntry[],
-): OperationContextEntryJSON {
-	return {
-		values: entry.values,
-		stacktrace: String(entry.error.stack || entry.error)
-			.split('\n')
-			.slice(1, 2),
-		createdAt: entry.createdAt,
-		sinceLastEntry:
-			index > 0 ? entry.createdAt - entries[index - 1].createdAt : -1,
-	}
-}

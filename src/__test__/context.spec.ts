@@ -170,10 +170,10 @@ describe('OperationContext', () => {
 		it('should produce shortened json', () => {
 			const ctx = new OperationContext()
 			ctx.setValues({ a: 1 })
+			ctx.setValues({ b: 2 })
 			ctx.end()
 
-			expect(ctx.toJSON().trace[0].stacktrace.length).toBeGreaterThan(1)
-			expect(ctx.toShortJSON().trace[0].stacktrace).toHaveLength(1)
+			expect(ctx.getValues()).toEqual([{ a: 1 }, { b: 2 }]);
 		})
 	})
 
