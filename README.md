@@ -28,7 +28,7 @@ npm install @orthly/context
 
 **Table of Contents**
 
- * [Documentation](https://orthly-context.vercel.app)
+ * [Documentation](https://orthly-context.meetdandy.com/)
  * [Examples](https://codesandbox.io/s/orthly-context-examples-od2bd?file=/README.md)
  * [License](#license)
 
