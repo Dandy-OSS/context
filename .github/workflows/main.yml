@@ -2,11 +2,8 @@ name: CI
 on: [push]
 env:
   CI: true
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   build:
@@ -16,62 +13,58 @@ jobs:
         node: [12, 14, 16]
 
     steps:
-    - uses: actions/checkout@v1
+      - uses: actions/checkout@v1
 
-    - name: Setup Node.js for use with actions
-      uses: actions/setup-node@v1.1.0
-      with:
-        version: ${{ matrix.node }}
+      - name: Setup Node.js for use with actions
+        uses: actions/setup-node@v1.1.0
+        with:
+          version: ${{ matrix.node }}
 
-    - name: Get yarn cache directory path
-      id: yarn-cache-dir-path
-      run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
 
-    - uses: actions/cache@v2
-      id: yarn-cache
-      with:
-        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
+      - uses: actions/cache@v2
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
 
-    - name: Install Node.js dependencies
-      run: |
-        if ! [ -d "./node_modules" ]; then
-          yarn install --frozen-lockfile
-        fi
+      - name: Install Node.js dependencies
+        run: |
+          if ! [ -d "./node_modules" ]; then
+            yarn install --frozen-lockfile
+          fi
 
-    - name: Run lint
-      run: yarn lint
+      - name: Run lint
+        run: yarn lint
 
-    - name: Test types
-      run: npx tsc -p . --noEmit
+      - name: Test types
+        run: npx tsc -p . --noEmit
 
-    - name: Run tests
-      run: yarn test
+      - name: Run tests
+        run: yarn test
 
-    - name: Build
-      run: yarn build && yarn build:docs
+      - name: Build
+        run: yarn build && yarn build:docs
 
-    - name: Setup for deploy
-      run: |
-        set -ex
+      - name: Setup for deploy
+        run: |
+          set -ex
 
-        echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
-        npm whoami
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+          npm whoami
 
-        vercel -t $VERCEL_TOKEN whoami
+      # prerelease versions must have a '-' to be released
+      - name: Publish unstable
+        if: "startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') && matrix.node == 12"
+        run: |
+          npm publish --tag next
 
-    # prerelease versions must have a '-' to be released
-    - name: Publish unstable
-      if: "startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') && matrix.node == 12"
-      run: |
-        npm publish --tag next
-        vercel -t $VERCEL_TOKEN
-
-    # latest tags must not have a prerelease number
-    - name: Publish
-      if: "startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') && matrix.node == 12"
-      run: |
-        npm publish
-        vercel -t $VERCEL_TOKEN --prod
+      # latest tags must not have a prerelease number
+      - name: Publish
+        if: "startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') && matrix.node == 12"
+        run: |
+          npm publish
