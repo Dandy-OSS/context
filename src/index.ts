@@ -408,6 +408,13 @@ export class OperationContext {
 	}
 
 	/**
+	 * Retrieves the 'metrics' values, same as `toJSON()`, but skips stack frame generation.
+	 */
+	getMetrics() {
+		return this.metrics
+	}
+
+	/**
 	 * @returns return just the values from the stack, skipping any empty frames
 	 */
 	getValues(): Record<string, any>[] {
